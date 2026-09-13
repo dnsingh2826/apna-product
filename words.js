@@ -1,0 +1,23 @@
+/* Lexi word deck. Fixed content: the coach only ever teaches and quizzes on these entries. */
+window.LEXI_WORDS = Object.freeze([
+  { w: "ephemeral", pos: "adjective", def: "lasting for a very short time", ex: "Fame on social media is often ephemeral.", syn: ["fleeting", "short-lived"] },
+  { w: "meticulous", pos: "adjective", def: "showing great attention to detail; very careful and precise", ex: "She kept meticulous notes during every meeting.", syn: ["careful", "thorough"] },
+  { w: "resilient", pos: "adjective", def: "able to recover quickly from difficulties", ex: "The team stayed resilient after losing the first match.", syn: ["tough", "strong"] },
+  { w: "candid", pos: "adjective", def: "truthful and straightforward; frank", ex: "He gave a candid answer about why the project failed.", syn: ["honest", "frank"] },
+  { w: "pragmatic", pos: "adjective", def: "dealing with things sensibly and realistically", ex: "We need a pragmatic plan, not a perfect one.", syn: ["practical", "realistic"] },
+  { w: "ambiguous", pos: "adjective", def: "open to more than one interpretation; unclear", ex: "The instructions were ambiguous, so everyone did something different.", syn: ["unclear", "vague"] },
+  { w: "eloquent", pos: "adjective", def: "fluent and persuasive in speaking or writing", ex: "Her eloquent speech moved the whole audience.", syn: ["articulate", "expressive"] },
+  { w: "diligent", pos: "adjective", def: "showing steady, careful effort in work", ex: "A diligent student reviews notes every evening.", syn: ["hardworking", "industrious"] },
+  { w: "benevolent", pos: "adjective", def: "well-meaning and kind", ex: "The benevolent donor funded scholarships for hundreds of students.", syn: ["kind", "generous"] },
+  { w: "ubiquitous", pos: "adjective", def: "present or found everywhere", ex: "Smartphones have become ubiquitous in cities.", syn: ["everywhere", "widespread"] },
+  { w: "procrastinate", pos: "verb", def: "to delay or postpone doing something", ex: "I tend to procrastinate when a task feels boring.", syn: ["delay", "postpone"] },
+  { w: "collaborate", pos: "verb", def: "to work jointly with others on a task", ex: "Designers and engineers collaborate on every feature.", syn: ["cooperate", "team up"] },
+  { w: "alleviate", pos: "verb", def: "to make a problem or pain less severe", ex: "A short walk can alleviate stress.", syn: ["ease", "relieve"] },
+  { w: "articulate", pos: "verb", def: "to express an idea clearly in words", ex: "Try to articulate your goal in one sentence.", syn: ["express", "explain"] },
+  { w: "scrutinize", pos: "verb", def: "to examine something very closely", ex: "Reviewers scrutinize every line before approving the code.", syn: ["inspect", "examine"] },
+  { w: "empathy", pos: "noun", def: "the ability to understand and share another person's feelings", ex: "Good managers lead with empathy.", syn: ["understanding", "compassion"] },
+  { w: "dilemma", pos: "noun", def: "a difficult choice between two or more options", ex: "She faced a dilemma: accept the offer or finish her degree.", syn: ["predicament", "quandary"] },
+  { w: "consensus", pos: "noun", def: "general agreement among a group", ex: "After an hour of debate, the team reached a consensus.", syn: ["agreement", "accord"] },
+  { w: "incentive", pos: "noun", def: "something that motivates a person to do something", ex: "A bonus is a strong incentive to hit the target.", syn: ["motivation", "reward"] },
+  { w: "momentum", pos: "noun", def: "the force that keeps something moving or growing", ex: "The startup gained momentum after its first big client.", syn: ["drive", "impetus"] },
+].map(Object.freeze));

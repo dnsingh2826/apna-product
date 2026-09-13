@@ -1,0 +1,12 @@
+{
+  "name": "lexi-tests",
+  "private": true,
+  "type": "module",
+  "description": "Browser-level tests for Lexi using jsdom with fake speech APIs.",
+  "scripts": {
+    "test": "node app.test.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.0"
+  }
+}

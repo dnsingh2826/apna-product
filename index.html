@@ -3,633 +3,210 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Lexi · Voice Vocabulary Coach</title>
-<meta name="description" content="A voice agent that teaches you new words, listens to you use them, and quizzes you — all by talking." />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%230058fe'/><rect x='38' y='22' width='24' height='40' rx='12' fill='white'/><path d='M28 52a22 22 0 0 0 44 0' stroke='white' stroke-width='7' fill='none'/><rect x='46' y='72' width='8' height='12' fill='white'/></svg>" />
-<style>
-  :root {
-    --bg: #000000;
-    --surface: #18181b;
-    --surface-2: #09090b;
-    --border: #27272a;
-    --text: #ffffff;
-    --muted: #929698;
-    --accent: #0058fe;
-    --accent-deep: #003dbb;
-    --accent-light: #148eff;
-    --danger: #f97316;
-    --shadow-raised: rgba(0,0,0,0.15) 0 0 0.8rem 0.1rem;
-    --shadow-glow: rgba(19,46,112,0.1) 0 1rem 4rem 0;
-    --ease: cubic-bezier(.22,1,.36,1);
-    --radius: 1.6rem;
-    --radius-sm: 0.8rem;
-    color-scheme: dark;
-  }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
-  body {
-    font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    font-size: 15px; line-height: 1.5;
-    min-height: 100vh;
-    -webkit-font-smoothing: antialiased;
-  }
-  button { font: inherit; color: inherit; cursor: pointer; }
-  button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-  .nav {
-    display: flex; align-items: center; gap: 8px;
-    padding: 12px 16px; border-bottom: 1px solid var(--border);
-    position: sticky; top: 0; background: var(--bg); z-index: 10;
-  }
-  .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; letter-spacing: -0.01em; }
-  .brand-dot { width: 12px; height: 12px; border-radius: 9999px; background: var(--accent); }
-  .nav .spacer { flex: 1; }
-  .badge {
-    display: inline-flex; align-items: center; gap: 4px;
-    padding: 4px 8px; border-radius: 9999px;
-    font-size: 12px; font-weight: 500;
-    background: var(--surface); color: var(--muted); border: 1px solid var(--border);
-  }
-  .badge b { color: var(--text); font-weight: 600; }
-
-  .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
-  .grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
-  @media (min-width: 768px) { .grid { grid-template-columns: 5fr 4fr; align-items: start; } }
-
-  .card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow-raised);
-  }
-  .card h3 { margin: 0 0 4px; font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
-
-  /* Stage */
-  .stage { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 32px 16px 24px; gap: 16px; min-height: 420px; }
-  .orb-wrap { position: relative; width: 160px; height: 160px; display: grid; place-items: center; }
-  .orb {
-    width: 112px; height: 112px; border-radius: 9999px;
-    background: radial-gradient(circle at 35% 30%, var(--accent-light), var(--accent) 45%, var(--accent-deep) 100%);
-    border: 0; display: grid; place-items: center;
-    box-shadow: var(--shadow-glow), 0 0.4rem 0.8rem rgba(0,0,0,0.16);
-    transition: transform 300ms var(--ease), box-shadow 300ms var(--ease), background 300ms var(--ease);
-    position: relative; z-index: 2;
-  }
-  .orb:hover { transform: scale(1.03); }
-  .orb svg { width: 44px; height: 44px; fill: #fff; }
-  .ring { position: absolute; inset: 0; border-radius: 9999px; border: 2px solid var(--accent); opacity: 0; z-index: 1; }
-  .stage[data-state="listening"] .ring { animation: ripple 1.5s var(--ease) infinite; }
-  .stage[data-state="listening"] .ring.r2 { animation-delay: 0.5s; }
-  .stage[data-state="listening"] .ring.r3 { animation-delay: 1s; }
-  .stage[data-state="speaking"] .orb { animation: breathe 1.2s ease-in-out infinite; }
-  .stage[data-state="thinking"] .orb { background: var(--border); box-shadow: none; }
-  .stage[data-state="idle"] .orb { background: var(--surface-2); border: 1px solid var(--border); box-shadow: none; }
-  .stage[data-state="idle"] .orb svg { fill: var(--muted); }
-  @keyframes ripple { 0% { transform: scale(0.7); opacity: 0.8; } 100% { transform: scale(1.35); opacity: 0; } }
-  @keyframes breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.07); } }
-
-  .status { font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); min-height: 18px; }
-  .status[data-live="1"] { color: var(--accent-light); }
-  .caption { font-size: 18px; font-weight: 500; min-height: 54px; max-width: 520px; color: var(--text); }
-  .caption.user { color: var(--muted); font-style: italic; }
-  .interim { color: var(--muted); font-size: 14px; min-height: 20px; }
-
-  .word-card { width: 100%; max-width: 520px; text-align: left; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: none; animation: enter 360ms var(--ease); }
-  .word-card.show { display: block; }
-  .word-card .w { font-size: 32px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
-  .word-card .pos { font-size: 12px; color: var(--muted); margin-left: 8px; font-weight: 500; }
-  .word-card .def { margin: 8px 0 4px; color: var(--text); }
-  .word-card .ex { color: var(--muted); font-size: 14px; }
-  .word-card .ex em { color: var(--text); font-style: normal; font-weight: 600; }
-  .word-card.masked .def, .word-card.masked .ex, .word-card.masked .w { filter: none; }
-  @keyframes enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-
-  .controls { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-  .btn { border-radius: var(--radius); padding: 8px 16px; font-weight: 500; border: 1px solid var(--border); background: transparent; transition: opacity 150ms ease, background 150ms ease, border-color 150ms ease; }
-  .btn:hover { border-color: var(--muted); }
-  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .btn.primary:hover { opacity: 0.9; }
-  .btn.danger { border-color: var(--danger); color: var(--danger); }
-  .btn:disabled { color: var(--muted); border-color: var(--border); cursor: not-allowed; background: transparent; }
-  .btn.primary:disabled { background: var(--border); }
-
-  .typebar { display: flex; gap: 8px; width: 100%; max-width: 520px; }
-  .input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 12px; color: var(--text); font-size: 14px; }
-  .input:focus { border-color: var(--accent); outline: none; }
-
-  /* Right column */
-  .side { display: flex; flex-direction: column; gap: 16px; }
-  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .stat { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; }
-  .stat .lbl { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
-  .stat .val { font-size: 24px; font-weight: 700; line-height: 1.2; }
-
-  .log { display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow-y: auto; padding-right: 4px; }
-  .msg { padding: 8px 12px; border-radius: var(--radius-sm); font-size: 14px; max-width: 92%; animation: enter 300ms var(--ease); }
-  .msg.agent { background: var(--surface-2); border: 1px solid var(--border); align-self: flex-start; }
-  .msg.user { background: var(--accent-deep); color: #fff; align-self: flex-end; }
-  .msg.sys { color: var(--muted); font-size: 12px; align-self: center; }
-
-  .cmds { display: flex; flex-wrap: wrap; gap: 4px; }
-  .chip { font-size: 12px; padding: 4px 8px; border-radius: 9999px; border: 1px solid var(--border); color: var(--muted); background: transparent; }
-  .chip:hover { color: var(--text); border-color: var(--muted); }
-
-  .words { display: flex; flex-wrap: wrap; gap: 4px; }
-  .words .chip { cursor: default; }
-  .words .chip.done { border-color: var(--accent); color: var(--accent-light); }
-  .words .chip.cur { background: var(--accent); border-color: var(--accent); color: #fff; }
-
-  .note { font-size: 12px; color: var(--muted); }
-  .note.warn { color: var(--danger); }
-  footer { text-align: center; color: var(--muted); font-size: 12px; padding: 24px 16px 0; }
-  footer a { color: var(--muted); }
-
-  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
-</style>
+<title>Lexi, Voice Vocabulary Coach</title>
+<meta name="description" content="Learn new words by talking. Lexi teaches a word, listens to you say it and use it, then quizzes you." />
+<meta name="theme-color" content="#004ce6" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' fill='%23004ce6'/><g fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><rect x='9' y='4' width='6' height='11' rx='3'/><path d='M6 11a6 6 0 0 0 12 0M12 17v3M9 20h6'/></g></svg>" />
+<link rel="preload" href="fonts/PlusJakartaSans-Variable.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
-<nav class="nav">
-  <div class="brand"><span class="brand-dot"></span> Lexi <span style="color:var(--muted);font-weight:500">· Voice Vocabulary Coach</span></div>
-  <div class="spacer"></div>
-  <span class="badge" id="streakBadge">🔥 <b id="streak">0</b> day streak</span>
-</nav>
+<!-- Icon sprite: Feather-style line icons, 24 viewBox, stroke currentColor -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5V4.5A2.5 2.5 0 0 1 6.5 2H20v15H6.5A2.5 2.5 0 0 0 4 19.5z"/></symbol>
+  <symbol id="i-bar" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+  <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.5 9A9 9 0 0 0 5.6 5.6L1 10m22 4l-4.6 4.4A9 9 0 0 1 3.5 15"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/></symbol>
+  <symbol id="i-skip" viewBox="0 0 24 24"><path d="M5 4l10 8-10 8zM19 5v14"/></symbol>
+  <symbol id="i-square" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></symbol>
+</svg>
 
-<main class="wrap">
-  <div class="grid">
-    <!-- LEFT: voice stage -->
-    <section class="card stage" id="stage" data-state="idle" aria-live="polite">
-      <div class="orb-wrap">
-        <span class="ring r1"></span><span class="ring r2"></span><span class="ring r3"></span>
-        <button class="orb" id="orb" aria-label="Talk to Lexi" title="Tap to talk">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a1 1 0 1 1 2 0 7 7 0 0 1-6 6.93V20h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.07A7 7 0 0 1 5 11a1 1 0 1 1 2 0 5 5 0 0 0 10 0Z"/></svg>
-        </button>
-      </div>
-      <div class="status" id="status">Tap the mic to start</div>
-      <div class="caption" id="caption">Hi, I'm Lexi. I'll teach you new words by talking with you. Tap the mic and say hello.</div>
-      <div class="interim" id="interim"></div>
+<!-- Mobile top bar -->
+<header class="topbar">
+  <button class="icon-btn" id="menuBtn" type="button" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false"><svg class="icon"><use href="#i-menu"/></svg></button>
+  <span class="logo" aria-hidden="true"><svg class="icon"><use href="#i-mic"/></svg></span>
+  <span class="wordmark">Lexi<span class="wordmark__dot">.</span></span>
+</header>
+<div class="scrim" id="scrim" hidden></div>
 
-      <div class="word-card" id="wordCard">
-        <div><span class="w" id="wcWord">—</span><span class="pos" id="wcPos"></span></div>
-        <div class="def" id="wcDef"></div>
-        <div class="ex" id="wcEx"></div>
-      </div>
-
-      <div class="controls">
-        <button class="btn primary" id="btnStart">Start session</button>
-        <button class="btn" data-say="teach me">Teach me</button>
-        <button class="btn" data-say="quiz me">Quiz me</button>
-        <button class="btn" data-say="repeat">Repeat</button>
-        <button class="btn" data-say="next">Next</button>
-        <button class="btn danger" data-say="stop">Stop</button>
-      </div>
-
-      <form class="typebar" id="typeForm" autocomplete="off">
-        <input class="input" id="typeInput" placeholder="No mic? Type your reply here…" aria-label="Type your reply" />
-        <button class="btn" type="submit">Send</button>
-      </form>
-      <div class="note" id="supportNote"></div>
-    </section>
-
-    <!-- RIGHT: progress + transcript -->
-    <aside class="side">
-      <div class="card">
-        <h3>Your progress</h3>
-        <div class="stats">
-          <div class="stat"><div class="lbl">Learned</div><div class="val" id="stLearned">0</div></div>
-          <div class="stat"><div class="lbl">Quiz score</div><div class="val" id="stScore">0/0</div></div>
-          <div class="stat"><div class="lbl">Words left</div><div class="val" id="stLeft">0</div></div>
-        </div>
-        <div style="height:12px"></div>
-        <div class="words" id="wordList"></div>
-      </div>
-
-      <div class="card">
-        <h3>Things you can say</h3>
-        <div class="cmds" id="cmds">
-          <button class="chip" data-say="teach me">"teach me"</button>
-          <button class="chip" data-say="quiz me">"quiz me"</button>
-          <button class="chip" data-say="repeat">"repeat"</button>
-          <button class="chip" data-say="example">"give me an example"</button>
-          <button class="chip" data-say="spell it">"spell it"</button>
-          <button class="chip" data-say="hint">"hint"</button>
-          <button class="chip" data-say="skip">"skip"</button>
-          <button class="chip" data-say="score">"what's my score"</button>
-          <button class="chip" data-say="help">"help"</button>
-          <button class="chip" data-say="reset progress">"reset progress"</button>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3>Conversation</h3>
-        <div class="log" id="log"><div class="msg sys">Session transcript will appear here.</div></div>
-      </div>
-    </aside>
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar" aria-label="Navigation">
+  <div class="brand-row">
+    <span class="logo" aria-hidden="true"><svg class="icon"><use href="#i-mic"/></svg></span>
+    <span class="wordmark">Lexi<span class="wordmark__dot">.</span></span>
   </div>
 
-  <footer>
-    Prototype · Uses your browser's built-in speech recognition and text-to-speech (works best in Chrome / Edge). No data leaves your device except audio processed by your browser's speech service.
-    · <a href="https://github.com/dnsingh2826/apna-product" target="_blank" rel="noopener">Source</a>
-  </footer>
+  <nav class="nav">
+    <div class="nav-group">
+      <div class="nav-title">Practice</div>
+      <button class="nav-item active" type="button" data-view="session"><svg class="icon"><use href="#i-play"/></svg><span>Session</span></button>
+      <button class="nav-item" type="button" data-view="progress"><svg class="icon"><use href="#i-bar"/></svg><span>Progress</span><span class="nav-count" id="navProgressCount">0/20</span></button>
+      <button class="nav-item" type="button" data-view="transcript"><svg class="icon"><use href="#i-list"/></svg><span>Transcript</span><span class="nav-count" id="navLogCount">0</span></button>
+    </div>
+    <div class="nav-group">
+      <div class="nav-title">About</div>
+      <p class="nav-note">Twenty words. Lexi teaches one, hears you say it, hears you use it, then quizzes you later. Nothing leaves this device except audio handled by your browser.</p>
+    </div>
+  </nav>
+
+  <div class="sidebar-foot">
+    <div class="voice-row" id="voiceRow" data-ok="0">
+      <span class="voice-avatar" aria-hidden="true"><svg class="icon"><use href="#i-mic"/></svg></span>
+      <span class="voice-text"><span class="voice-title" id="voiceTitle">Checking voice</span><span class="voice-sub" id="voiceSub">Browser speech service</span></span>
+    </div>
+    <a class="foot-link" href="https://github.com/dnsingh2826/apna-product" target="_blank" rel="noopener">Source on GitHub</a>
+  </div>
+</aside>
+
+<!-- Main content: the only scroll area -->
+<main class="main-content" id="main">
+
+  <!-- ============ Session view ============ -->
+  <section class="view active" id="view-session" data-view="session">
+    <header class="page-header">
+      <div>
+        <h1>Practice session</h1>
+        <p class="subtitle" id="sessionSub">Press Start, then talk. Say "teach me" for a new word or "quiz me" to be tested.</p>
+      </div>
+      <div class="page-actions">
+        <button class="btn-outline" id="btnEnd" type="button" hidden><svg class="icon"><use href="#i-square"/></svg>End session</button>
+        <button class="btn-primary" id="btnStart" type="button"><svg class="icon"><use href="#i-play"/></svg>Start session</button>
+      </div>
+    </header>
+
+    <div class="grid-4">
+      <div class="card stat-card"><div class="stat-label">Learned</div><div class="stat-value" id="stLearned">0</div><div class="stat-sub">of <span id="stTotal">20</span> words</div></div>
+      <div class="card stat-card"><div class="stat-label">Quiz score</div><div class="stat-value" id="stScore">0/0</div><div class="stat-sub">correct of asked</div></div>
+      <div class="card stat-card"><div class="stat-label">Accuracy</div><div class="stat-value" id="stAccuracy">0%</div><div class="stat-sub">quiz answers</div></div>
+      <div class="card stat-card"><div class="stat-label">Day streak</div><div class="stat-value" id="stStreak">0</div><div class="stat-sub">consecutive days</div></div>
+    </div>
+
+    <div class="session-grid">
+      <!-- Practice card -->
+      <section class="card practice" aria-label="Practice">
+        <div class="widget-head">
+          <span>Practice</span>
+          <span class="band-status"><span class="status-dot" id="statusDot" data-state="off"></span><span id="modeLabel">Not started</span></span>
+        </div>
+
+        <div class="steps" id="steps" aria-label="Exercise steps"></div>
+
+        <div class="empty-state" id="welcome">
+          <div class="section-title">How it works</div>
+          <ol class="how">
+            <li><span class="how-n">1</span><span><b>Hear.</b> Lexi says the word, its meaning and an example sentence.</span></li>
+            <li><span class="how-n">2</span><span><b>Say.</b> You repeat the word. Lexi checks what it heard.</span></li>
+            <li><span class="how-n">3</span><span><b>Use.</b> You use it in your own sentence. Then it counts as learned.</span></li>
+          </ol>
+          <p class="support-note" id="supportNote"></p>
+        </div>
+
+        <div class="word-block" id="wordBlock" hidden>
+          <div class="word-meta"><span class="chip" id="wordPos">adjective</span><span class="word-len" id="wordLen"></span></div>
+          <div class="word" id="word" aria-live="polite"></div>
+          <p class="definition" id="definition"></p>
+          <blockquote class="quote" id="example"></blockquote>
+        </div>
+
+        <div class="coach" id="coach" data-speaking="0" aria-live="polite">
+          <div class="coach-head"><span class="coach-name">Lexi</span><span class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span></div>
+          <p class="coach-text" id="coachText">Press Start and I'll introduce myself.</p>
+          <p class="heard" id="heard"></p>
+        </div>
+
+        <div class="fs-bar">
+          <form class="typeform" id="typeForm" autocomplete="off">
+            <label class="sr-only" for="typeInput">Type your reply</label>
+            <input class="fs-text" id="typeInput" type="text" maxlength="200" placeholder="Type a reply instead" />
+            <button class="fs-btn" type="submit" title="Send"><svg class="icon"><use href="#i-send"/></svg>Send</button>
+          </form>
+          <div class="fs-actions">
+            <button class="fs-btn" id="btnRepeat" type="button" disabled title="Hear the last line again"><svg class="icon"><use href="#i-rotate"/></svg>Repeat</button>
+            <button class="fs-btn" id="btnHint" type="button" disabled title="A clue for the current word"><svg class="icon"><use href="#i-help"/></svg>Hint</button>
+            <button class="fs-btn" id="btnSkip" type="button" disabled title="Move to another word"><svg class="icon"><use href="#i-skip"/></svg>Skip</button>
+            <button class="fs-btn fs-btn--primary speak" id="mic" type="button" data-state="off" aria-label="Tap to start"><svg class="icon"><use href="#i-mic"/></svg><span id="micLabel">Tap to start</span></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Commands card -->
+      <section class="card" aria-label="Things you can say">
+        <div class="widget-head"><span>Things you can say</span><span class="band-hint">Click a row to try it</span></div>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead><tr><th>Say</th><th>Lexi</th></tr></thead>
+            <tbody>
+              <tr class="clickable-row" data-say="teach me"><td class="em">"Teach me"</td><td>Introduces a new word</td></tr>
+              <tr class="clickable-row" data-say="quiz me"><td class="em">"Quiz me"</td><td>Reads a definition, you say the word</td></tr>
+              <tr class="clickable-row" data-say="repeat"><td class="em">"Repeat"</td><td>Says the last line again</td></tr>
+              <tr class="clickable-row" data-say="give me an example"><td class="em">"Example"</td><td>A sentence using the word</td></tr>
+              <tr class="clickable-row" data-say="spell it"><td class="em">"Spell it"</td><td>Spells the word letter by letter</td></tr>
+              <tr class="clickable-row" data-say="hint"><td class="em">"Hint"</td><td>A clue during the quiz</td></tr>
+              <tr class="clickable-row" data-say="skip"><td class="em">"Skip"</td><td>Moves to another word</td></tr>
+              <tr class="clickable-row" data-say="what's my score"><td class="em">"Score"</td><td>Words learned and quiz accuracy</td></tr>
+              <tr class="clickable-row" data-say="slower"><td class="em">"Slower"</td><td>Speaks more slowly ("faster" works too)</td></tr>
+              <tr class="clickable-row" data-say="stop"><td class="em">"Stop"</td><td>Ends the session</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <!-- ============ Progress view ============ -->
+  <section class="view" id="view-progress" data-view="progress" hidden>
+    <header class="page-header">
+      <div>
+        <h1>Progress</h1>
+        <p class="subtitle">Saved in this browser only. Words count as learned once you have used them in a sentence or answered them in a quiz.</p>
+      </div>
+      <div class="page-actions">
+        <button class="btn-outline" id="btnReset" type="button" title="Lexi will ask you to confirm">Reset progress</button>
+      </div>
+    </header>
+
+    <section class="card">
+      <div class="widget-head"><span>Deck</span><span class="band-hint" id="progressNote">0 of 20 words learned</span></div>
+      <div class="progress" role="progressbar" aria-label="Words learned" aria-valuemin="0" aria-valuemax="20" aria-valuenow="0" id="progressEl"><i id="progressBar"></i></div>
+      <div class="table-wrapper">
+        <table class="data-table deck-table">
+          <thead><tr><th>Word</th><th>Part of speech</th><th>Meaning</th><th>Status</th></tr></thead>
+          <tbody id="deck"></tbody>
+        </table>
+      </div>
+    </section>
+  </section>
+
+  <!-- ============ Transcript view ============ -->
+  <section class="view" id="view-transcript" data-view="transcript" hidden>
+    <header class="page-header">
+      <div>
+        <h1>Transcript</h1>
+        <p class="subtitle">Everything said in this session. Cleared when you reload the page.</p>
+      </div>
+    </header>
+    <section class="card">
+      <div class="widget-head"><span>Conversation</span><span class="band-hint" id="logCount">0 lines</span></div>
+      <div class="table-wrapper">
+        <table class="data-table log-table">
+          <thead><tr><th>Time</th><th>Who</th><th>Said</th></tr></thead>
+          <tbody id="log"><tr class="empty"><td colspan="3">Nothing yet. Start a session to begin.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </section>
 </main>
 
-<script>
-/* ---------------------------------------------------------------------------
-   Word bank
---------------------------------------------------------------------------- */
-const WORDS = [
-  { w: "ephemeral", pos: "adjective", def: "lasting for a very short time", ex: "Fame on social media is often ephemeral.", syn: ["fleeting", "short-lived"] },
-  { w: "meticulous", pos: "adjective", def: "showing great attention to detail; very careful and precise", ex: "She kept meticulous notes during every meeting.", syn: ["careful", "thorough"] },
-  { w: "resilient", pos: "adjective", def: "able to recover quickly from difficulties", ex: "The team stayed resilient after losing the first match.", syn: ["tough", "strong"] },
-  { w: "candid", pos: "adjective", def: "truthful and straightforward; frank", ex: "He gave a candid answer about why the project failed.", syn: ["honest", "frank"] },
-  { w: "pragmatic", pos: "adjective", def: "dealing with things sensibly and realistically", ex: "We need a pragmatic plan, not a perfect one.", syn: ["practical", "realistic"] },
-  { w: "ambiguous", pos: "adjective", def: "open to more than one interpretation; unclear", ex: "The instructions were ambiguous, so everyone did something different.", syn: ["unclear", "vague"] },
-  { w: "eloquent", pos: "adjective", def: "fluent and persuasive in speaking or writing", ex: "Her eloquent speech moved the whole audience.", syn: ["articulate", "expressive"] },
-  { w: "diligent", pos: "adjective", def: "showing steady, careful effort in work", ex: "A diligent student reviews notes every evening.", syn: ["hardworking", "industrious"] },
-  { w: "benevolent", pos: "adjective", def: "well-meaning and kind", ex: "The benevolent donor funded scholarships for hundreds of students.", syn: ["kind", "generous"] },
-  { w: "ubiquitous", pos: "adjective", def: "present or found everywhere", ex: "Smartphones have become ubiquitous in cities.", syn: ["everywhere", "widespread"] },
-  { w: "procrastinate", pos: "verb", def: "to delay or postpone doing something", ex: "I tend to procrastinate when a task feels boring.", syn: ["delay", "postpone"] },
-  { w: "collaborate", pos: "verb", def: "to work jointly with others on a task", ex: "Designers and engineers collaborate on every feature.", syn: ["cooperate", "team up"] },
-  { w: "alleviate", pos: "verb", def: "to make a problem or pain less severe", ex: "A short walk can alleviate stress.", syn: ["ease", "relieve"] },
-  { w: "articulate", pos: "verb", def: "to express an idea clearly in words", ex: "Try to articulate your goal in one sentence.", syn: ["express", "explain"] },
-  { w: "scrutinize", pos: "verb", def: "to examine something very closely", ex: "Reviewers scrutinize every line before approving the code.", syn: ["inspect", "examine"] },
-  { w: "empathy", pos: "noun", def: "the ability to understand and share another person's feelings", ex: "Good managers lead with empathy.", syn: ["understanding", "compassion"] },
-  { w: "dilemma", pos: "noun", def: "a difficult choice between two or more options", ex: "She faced a dilemma: accept the offer or finish her degree.", syn: ["predicament", "quandary"] },
-  { w: "consensus", pos: "noun", def: "general agreement among a group", ex: "After an hour of debate, the team reached a consensus.", syn: ["agreement", "accord"] },
-  { w: "incentive", pos: "noun", def: "something that motivates a person to do something", ex: "A bonus is a strong incentive to hit the target.", syn: ["motivation", "reward"] },
-  { w: "momentum", pos: "noun", def: "the force that keeps something moving or growing", ex: "The startup gained momentum after its first big client.", syn: ["drive", "impetus"] },
-];
+<div class="toast" id="toast" role="status" aria-live="polite"><span id="toastText"></span></div>
 
-/* ---------------------------------------------------------------------------
-   State & persistence
---------------------------------------------------------------------------- */
-const LS_KEY = "lexi.progress.v1";
-const today = () => new Date().toISOString().slice(0, 10);
-function loadProgress() {
-  try {
-    const p = JSON.parse(localStorage.getItem(LS_KEY) || "{}");
-    return { learned: p.learned || [], correct: p.correct || 0, asked: p.asked || 0, streak: p.streak || 0, lastDay: p.lastDay || null };
-  } catch { return { learned: [], correct: 0, asked: 0, streak: 0, lastDay: null }; }
-}
-function saveProgress() { try { localStorage.setItem(LS_KEY, JSON.stringify(P)); } catch {} }
-let P = loadProgress();
-function bumpStreak() {
-  const t = today();
-  if (P.lastDay === t) return;
-  const y = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
-  P.streak = P.lastDay === y ? P.streak + 1 : 1;
-  P.lastDay = t; saveProgress();
-}
-
-const S = {
-  started: false,
-  mode: "idle",          // idle | learn | quiz
-  step: null,            // learn: repeat | sentence ; quiz: answer
-  word: null,
-  attempts: 0,
-  lastAgentText: "",
-  listening: false,
-  speaking: false,
-  wantListen: false,
-};
-
-/* ---------------------------------------------------------------------------
-   DOM
---------------------------------------------------------------------------- */
-const $ = (id) => document.getElementById(id);
-const stage = $("stage"), statusEl = $("status"), captionEl = $("caption"), interimEl = $("interim");
-const logEl = $("log"), wordCard = $("wordCard");
-
-function setState(s, label) {
-  stage.dataset.state = s;
-  statusEl.textContent = label || ({ idle: "Tap the mic to start", listening: "Listening…", speaking: "Lexi is speaking", thinking: "Thinking…" })[s];
-  statusEl.dataset.live = s === "listening" ? "1" : "0";
-}
-function addLog(kind, text) {
-  if (logEl.firstChild && logEl.firstChild.classList.contains("sys") && logEl.children.length === 1) logEl.innerHTML = "";
-  const d = document.createElement("div"); d.className = "msg " + kind; d.textContent = text;
-  logEl.appendChild(d); logEl.scrollTop = logEl.scrollHeight;
-}
-function showWord(word, opts = {}) {
-  if (!word) { wordCard.classList.remove("show"); return; }
-  $("wcWord").textContent = opts.hideWord ? "?".repeat(word.w.length) : word.w;
-  $("wcPos").textContent = word.pos;
-  $("wcDef").textContent = word.def;
-  $("wcEx").innerHTML = opts.hideWord ? "" : word.ex.replace(new RegExp(word.w, "i"), (m) => `<em>${m}</em>`);
-  wordCard.classList.add("show");
-}
-function renderProgress() {
-  $("stLearned").textContent = P.learned.length;
-  $("stScore").textContent = `${P.correct}/${P.asked}`;
-  $("stLeft").textContent = WORDS.length - P.learned.length;
-  $("streak").textContent = P.streak;
-  const list = $("wordList"); list.innerHTML = "";
-  WORDS.forEach((x) => {
-    const c = document.createElement("span"); c.className = "chip";
-    if (P.learned.includes(x.w)) c.classList.add("done");
-    if (S.word && S.word.w === x.w) c.classList.add("cur");
-    c.textContent = x.w; list.appendChild(c);
-  });
-}
-
-/* ---------------------------------------------------------------------------
-   Speech: synthesis
---------------------------------------------------------------------------- */
-const synth = window.speechSynthesis;
-let voice = null;
-function pickVoice() {
-  if (!synth) return;
-  const vs = synth.getVoices();
-  if (!vs.length) return;
-  const prefs = [/Google US English/i, /Samantha/i, /Microsoft (Aria|Jenny|Zira)/i, /en-IN/i, /en-US/i, /en-GB/i, /^en/i];
-  for (const re of prefs) { const v = vs.find((v) => re.test(v.name) || re.test(v.lang)); if (v) { voice = v; return; } }
-  voice = vs[0];
-}
-if (synth) { pickVoice(); synth.onvoiceschanged = pickVoice; }
-
-function speak(text, { listenAfter = true } = {}) {
-  return new Promise((resolve) => {
-    S.lastAgentText = text;
-    captionEl.textContent = text; captionEl.classList.remove("user");
-    addLog("agent", text);
-    if (!synth) { resolve(); if (listenAfter) startListening(); return; }
-    stopListening();
-    synth.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    if (voice) u.voice = voice;
-    u.rate = 0.98; u.pitch = 1.0;
-    S.speaking = true; setState("speaking");
-    let done = false;
-    const finish = () => {
-      if (done) return; done = true;
-      S.speaking = false;
-      resolve();
-      if (listenAfter && S.started) setTimeout(startListening, 150); else if (S.started) setState("thinking", "Tap the mic to talk");
-    };
-    u.onend = finish; u.onerror = finish;
-    synth.speak(u);
-    // Safety: some browsers never fire onend for long text.
-    setTimeout(finish, Math.min(20000, 2500 + text.length * 70));
-  });
-}
-
-/* ---------------------------------------------------------------------------
-   Speech: recognition
---------------------------------------------------------------------------- */
-const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-let rec = null;
-if (SR) {
-  rec = new SR();
-  rec.lang = "en-US"; rec.continuous = false; rec.interimResults = true; rec.maxAlternatives = 3;
-  rec.onstart = () => { S.listening = true; setState("listening"); interimEl.textContent = ""; };
-  rec.onresult = (e) => {
-    let interim = "", finalText = "";
-    for (const r of e.results) { if (r.isFinal) finalText += r[0].transcript; else interim += r[0].transcript; }
-    interimEl.textContent = interim ? `“${interim}”` : "";
-    if (finalText) { interimEl.textContent = ""; handleUser(finalText.trim()); }
-  };
-  rec.onerror = (e) => {
-    S.listening = false;
-    if (e.error === "not-allowed" || e.error === "service-not-allowed") {
-      $("supportNote").className = "note warn";
-      $("supportNote").textContent = "Microphone access was blocked. Allow the mic in your browser's site settings, or type your replies below.";
-      setState("thinking", "Mic blocked — type below");
-    } else if (e.error === "no-speech") {
-      setState("thinking", "Didn't catch that — tap the mic");
-    } else if (e.error !== "aborted") {
-      setState("thinking", "Mic error — tap to retry");
-    }
-  };
-  rec.onend = () => { S.listening = false; if (stage.dataset.state === "listening") setState("thinking", "Tap the mic to talk"); };
-} else {
-  $("supportNote").className = "note warn";
-  $("supportNote").textContent = "Speech recognition isn't supported in this browser. Lexi will still talk to you — type your replies below. For the full voice experience, use Chrome or Edge.";
-}
-function startListening() {
-  if (!rec || S.listening || S.speaking) return;
-  try { rec.start(); } catch { /* already started */ }
-}
-function stopListening() { if (rec && S.listening) { try { rec.abort(); } catch {} S.listening = false; } }
-
-/* ---------------------------------------------------------------------------
-   Matching helpers
---------------------------------------------------------------------------- */
-const norm = (s) => s.toLowerCase().replace(/[^a-z0-9\s']/g, " ").replace(/\s+/g, " ").trim();
-function lev(a, b) {
-  const m = a.length, n = b.length; if (!m) return n; if (!n) return m;
-  let prev = Array.from({ length: n + 1 }, (_, i) => i), cur = new Array(n + 1);
-  for (let i = 1; i <= m; i++) { cur[0] = i; for (let j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); [prev, cur] = [cur, prev]; }
-  return prev[n];
-}
-const sim = (a, b) => 1 - lev(a, b) / Math.max(a.length, b.length, 1);
-function saidWord(text, word, loose = false) {
-  const t = norm(text), w = norm(word);
-  if (t.includes(w)) return true;
-  const toks = t.split(" ");
-  if (toks.some((tok) => sim(tok, w) >= 0.8 || (tok.length > 4 && w.startsWith(tok.slice(0, 5))))) return true;
-  // Recognizer often splits or mangles a lone word ("a femoral" for "ephemeral").
-  // When we asked the user to say just the word, compare the whole utterance loosely.
-  if (loose && toks.length <= 3) {
-    const joined = t.replace(/\s/g, "");
-    if (sim(joined, w) >= 0.6) return true;
-    if (joined.length >= 4 && (w.startsWith(joined.slice(0, 3)) || w.endsWith(joined.slice(-3))) && sim(joined, w) >= 0.5) return true;
-  }
-  return false;
-}
-const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-function hasIntent(text, ...phrases) {
-  const t = norm(text);
-  return phrases.some((p) => new RegExp(`\\b${esc(norm(p))}\\b`).test(t));
-}
-
-/* ---------------------------------------------------------------------------
-   Agent brain
---------------------------------------------------------------------------- */
-const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
-const praise = () => pick(["Nice!", "Great job!", "Exactly right.", "Perfect.", "You've got it!", "Well done."]);
-
-function nextWord(exclude) {
-  const fresh = WORDS.filter((x) => !P.learned.includes(x.w) && (!exclude || x.w !== exclude));
-  const pool = fresh.length ? fresh : WORDS.filter((x) => !exclude || x.w !== exclude);
-  return pick(pool);
-}
-
-async function greet() {
-  bumpStreak(); renderProgress();
-  const n = P.learned.length;
-  const intro = n
-    ? `Welcome back! You've learned ${n} word${n === 1 ? "" : "s"} so far. Say "teach me" for a new word, or "quiz me" to test yourself.`
-    : `Hi, I'm Lexi, your vocabulary coach. Say "teach me" to learn a new word, or "quiz me" to test what you know.`;
-  await speak(intro);
-}
-
-async function teach(word) {
-  S.mode = "learn"; S.step = "repeat"; S.attempts = 0;
-  S.word = word || nextWord(S.word && S.word.w);
-  showWord(S.word); renderProgress();
-  const w = S.word;
-  await speak(`Your new word is "${w.w}". ${w.w} is ${w.pos === "noun" ? "a noun" : w.pos === "verb" ? "a verb" : "an adjective"} meaning: ${w.def}. For example: ${w.ex} Now you try — say "${w.w}" out loud.`);
-}
-
-async function quiz(word) {
-  S.mode = "quiz"; S.step = "answer"; S.attempts = 0;
-  const learnedPool = WORDS.filter((x) => P.learned.includes(x.w) && (!S.word || x.w !== S.word.w));
-  S.word = word || (learnedPool.length >= 2 ? pick(learnedPool) : nextWord(S.word && S.word.w));
-  showWord(S.word, { hideWord: true }); renderProgress();
-  const w = S.word;
-  await speak(`Quiz time. Which word means: ${w.def}? It's ${w.pos === "noun" ? "a noun" : w.pos === "verb" ? "a verb" : "an adjective"} with ${w.w.length} letters.`);
-}
-
-function markLearned(w) { if (!P.learned.includes(w)) { P.learned.push(w); saveProgress(); } renderProgress(); }
-
-async function handleUser(text) {
-  if (!text) return;
-  captionEl.textContent = `“${text}”`; captionEl.classList.add("user");
-  addLog("user", text);
-  stopListening(); setState("thinking");
-  const w = S.word;
-
-  /* ---- global commands ---- */
-  if (hasIntent(text, "stop", "goodbye", "bye", "end session", "pause")) {
-    S.started = false; S.mode = "idle"; S.step = null;
-    await speak(`Okay, we'll stop here. You've learned ${P.learned.length} words. Tap the mic whenever you want to continue.`, { listenAfter: false });
-    setState("idle"); return;
-  }
-  /* ---- a correct answer beats any command word that happens to be in the sentence ---- */
-  const isAnswer = w && (
-    (S.mode === "quiz" && S.step === "answer" && saidWord(text, w.w)) ||
-    (S.mode === "learn" && S.step === "repeat" && saidWord(text, w.w, true)) ||
-    (S.mode === "learn" && S.step === "sentence" && saidWord(text, w.w) && norm(text).split(" ").length >= 3)
-  );
-
-  if (!isAnswer && hasIntent(text, "help", "what can you do", "what can i say")) {
-    return speak(`You can say "teach me" for a new word, "quiz me" to be tested, "repeat" to hear me again, "example" for a sentence, "spell it", "hint", "skip", or "score". Say "stop" when you're done.`);
-  }
-  if (!isAnswer) {
-  if (hasIntent(text, "reset progress", "start over", "clear progress")) {
-    P = { learned: [], correct: 0, asked: 0, streak: P.streak, lastDay: P.lastDay }; saveProgress(); S.word = null; showWord(null); renderProgress();
-    return speak(`Done — your progress is cleared. Say "teach me" to begin again.`);
-  }
-  if (hasIntent(text, "score", "progress", "how am i doing", "how many words")) {
-    const pct = P.asked ? Math.round((100 * P.correct) / P.asked) : 0;
-    return speak(`You've learned ${P.learned.length} of ${WORDS.length} words, and you've answered ${P.correct} of ${P.asked} quiz questions correctly${P.asked ? `, that's ${pct} percent` : ""}. Say "teach me" or "quiz me" to keep going.`);
-  }
-  if (hasIntent(text, "teach me", "new word", "learn", "next word", "another word", "teach", "next")) return teach();
-  if (hasIntent(text, "quiz me", "test me", "quiz", "test")) return quiz();
-  if (w && hasIntent(text, "meaning", "what does it mean", "definition", "define", "means")) {
-    return speak(`${w.w} means: ${w.def}.`);
-  }
-  if (hasIntent(text, "repeat", "say that again", "again", "pardon", "what did you say", "come again")) {
-    return speak(S.lastAgentText || `Say "teach me" or "quiz me" to begin.`);
-  }
-  if (w && hasIntent(text, "example", "sentence", "use it")) {
-    return speak(`Here's an example: ${w.ex}${S.mode === "learn" ? ` Now you try — ${S.step === "repeat" ? `say "${w.w}"` : `use "${w.w}" in a sentence`}.` : ""}`);
-  }
-  if (w && hasIntent(text, "spell", "spelling")) {
-    return speak(`${S.mode === "quiz" ? "That would give it away! Here's a hint instead: it starts with " + w.w[0].toUpperCase() + "." : `${w.w} is spelled ${w.w.toUpperCase().split("").join(", ")}.`}`);
-  }
-  if (w && hasIntent(text, "hint", "clue", "i don't know", "dont know", "no idea", "not sure")) {
-    if (S.mode === "quiz") {
-      S.attempts++;
-      return speak(`Hint: it starts with "${w.w[0].toUpperCase()}" and it's similar to "${w.syn[0]}". Which word is it?`);
-    }
-    return speak(`No problem — the word is "${w.w}". Just say it back to me.`);
-  }
-  if (hasIntent(text, "skip", "pass", "move on")) {
-    if (S.mode === "quiz" && w) { P.asked++; saveProgress(); await speak(`The answer was "${w.w}" — ${w.def}. Let's try another.`, { listenAfter: false }); return quiz(); }
-    if (S.mode === "learn") { await speak(`Skipping. Here's a different word.`, { listenAfter: false }); return teach(); }
-    return teach();
-  }
-  } // end !isAnswer
-
-  /* ---- mode-specific ---- */
-  if (S.mode === "learn" && w) {
-    if (S.step === "repeat") {
-      if (saidWord(text, w.w, true)) {
-        S.step = "sentence"; S.attempts = 0;
-        return speak(`${praise()} Now use "${w.w}" in your own sentence.`);
-      }
-      S.attempts++;
-      if (S.attempts >= 2) { S.step = "sentence"; S.attempts = 0; return speak(`Close enough — it's pronounced "${w.w}". Let's move on: use "${w.w}" in your own sentence.`); }
-      return speak(`Hmm, I heard "${text}". Try once more: say "${w.w}".`);
-    }
-    if (S.step === "sentence") {
-      const words = norm(text).split(" ").length;
-      if (saidWord(text, w.w) && words >= 3) {
-        markLearned(w.w);
-        S.step = null;
-        await speak(`${praise()} "${text}" — that's a good use of "${w.w}". I've marked it as learned.`, { listenAfter: false });
-        return P.learned.length >= WORDS.length
-          ? speak(`Wow — you've learned every word in the deck! Say "quiz me" to keep them fresh.`)
-          : speak(`Ready for another? Say "teach me", or say "quiz me" to test yourself.`);
-      }
-      S.attempts++;
-      if (!saidWord(text, w.w)) {
-        if (S.attempts >= 2) { markLearned(w.w); S.step = null; return speak(`That's okay. One example: "${w.ex}" I'll mark "${w.w}" as learned so we can quiz on it later. Say "teach me" for the next word.`); }
-        return speak(`Good try, but I didn't hear "${w.w}" in that sentence. Try again — for example: "${w.ex}"`);
-      }
-      return speak(`Almost — give me a fuller sentence with "${w.w}" in it.`);
-    }
-  }
-
-  if (S.mode === "quiz" && w) {
-    if (saidWord(text, w.w)) {
-      P.correct++; P.asked++; saveProgress(); markLearned(w.w); showWord(w);
-      S.step = null;
-      await speak(`${praise()} "${w.w}" — ${w.def}.`, { listenAfter: false });
-      return quiz();
-    }
-    S.attempts++;
-    if (S.attempts >= 3) {
-      P.asked++; saveProgress(); showWord(w); S.step = null;
-      await speak(`Not quite. The word was "${w.w}": ${w.def}. For example, ${w.ex}`, { listenAfter: false });
-      return quiz();
-    }
-    const hint = S.attempts === 1 ? `Hint: it starts with "${w.w[0].toUpperCase()}".` : `Another hint: it's similar to "${w.syn[0]}".`;
-    return speak(`Not "${text}". ${hint} Try again.`);
-  }
-
-  /* ---- fallback ---- */
-  if (hasIntent(text, "hello", "hi", "hey", "start", "begin", "yes", "okay", "ok", "sure", "ready")) {
-    return speak(`Great! Say "teach me" to learn a new word, or "quiz me" to test yourself.`);
-  }
-  return speak(`I didn't quite get that. You can say "teach me", "quiz me", or "help".`);
-}
-
-/* ---------------------------------------------------------------------------
-   Wiring
---------------------------------------------------------------------------- */
-async function startSession() {
-  if (S.started) { if (S.speaking) { synth && synth.cancel(); S.speaking = false; } startListening(); return; }
-  S.started = true;
-  $("btnStart").textContent = "Session running";
-  $("btnStart").disabled = true;
-  // Unlock audio on iOS/Safari with a silent utterance triggered by the user gesture.
-  if (synth) { try { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; synth.speak(u); } catch {} }
-  await greet();
-}
-$("orb").addEventListener("click", startSession);
-$("btnStart").addEventListener("click", startSession);
-
-document.querySelectorAll("[data-say]").forEach((b) => b.addEventListener("click", async () => {
-  if (!S.started) { S.started = true; $("btnStart").textContent = "Session running"; $("btnStart").disabled = true; bumpStreak(); }
-  handleUser(b.dataset.say);
-}));
-
-$("typeForm").addEventListener("submit", (e) => {
-  e.preventDefault();
-  const v = $("typeInput").value.trim(); if (!v) return;
-  $("typeInput").value = "";
-  if (!S.started) { S.started = true; $("btnStart").textContent = "Session running"; $("btnStart").disabled = true; bumpStreak(); }
-  handleUser(v);
-});
-
-// Space bar = push to talk (when not typing)
-document.addEventListener("keydown", (e) => {
-  if (e.code === "Space" && document.activeElement !== $("typeInput")) { e.preventDefault(); startSession(); }
-});
-
-renderProgress();
-</script>
+<script src="words.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
