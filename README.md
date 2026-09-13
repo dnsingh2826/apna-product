@@ -4,7 +4,9 @@ A working prototype of a **voice agent that helps people learn vocabulary**. You
 
 ## Try it
 
-Open the deployed prototype (link in the repo description) in **Chrome or Edge** on desktop or Android, allow the microphone, and tap the mic orb.
+**Live prototype: https://apna-product-lake.vercel.app**
+
+Open it in **Chrome or Edge** on desktop or Android, allow the microphone, and tap the mic orb.
 
 Then just talk:
 
