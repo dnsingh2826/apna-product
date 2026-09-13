@@ -92,11 +92,14 @@ Thirty-eight tests boot the real page in jsdom with fake speech recognition and 
 
 ## Deploy
 
-The live site is deployed with the Vercel CLI from this folder:
+The live site is deployed with the Vercel CLI. Vercel's hobby plan blocks deployments whose git commit author is not a verified team member (`TEAM_ACCESS_REQUIRED`), so deploy from a copy of the site files without the `.git` folder:
 
 ```bash
-vercel deploy --prod
+mkdir -p /tmp/lexi-deploy && rsync -a --exclude .git --exclude tests --exclude design.md --exclude README.md ./ /tmp/lexi-deploy/
+cd /tmp/lexi-deploy && vercel deploy --prod
 ```
+
+Only `index.html`, `styles.css`, `app.js`, `words.js` and `fonts/` are needed at runtime. `.vercelignore` keeps test dependencies out of any deploy from the repo root.
 
 ## Next steps
 
